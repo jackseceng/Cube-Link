@@ -13,6 +13,17 @@ env:
   IMAGE_NAME: linkshort
 
 jobs:
+  check:
+    name: check creds
+    runs-on: ubuntu-latest
+    run: |
+      if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+        echo "Error: DOCKER_USERNAME is empty!"
+        exit 1
+      else
+        echo "DOCKER_USERNAME is populated."
+      fi
+
   semgrep:
     name: Analyze (semgrep)
     runs-on: ubuntu-24.04
