@@ -14,9 +14,10 @@ env:
 
 jobs:
   check:
+    name: Check GHA for Credentials
     runs-on: ubuntu-24.04
     steps:
-      - name: Check GHA Secrets for Credentials
+      - name: Run check script
         run: |
           if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
             echo "Error: DOCKERHUB_USERNAME is empty!"
