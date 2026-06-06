@@ -1,8 +1,8 @@
-# LinkShort — Project Steering
+# Cube-Link — Project Steering
 
 ## Overview
 
-LinkShort is a Python/Flask URL shortening web app. URLs are encrypted at rest using PBKDF2+Fernet, stored in a Turso (libSQL) database, and served via Gunicorn inside a minimal scratch-based Docker image. The live instance runs at [cubel.ink](https://cubel.ink).
+Cube-Link is a Python/Flask URL shortening web app. URLs are encrypted at rest using PBKDF2+Fernet, stored in a Turso (libSQL) database, and served via Gunicorn inside a minimal scratch-based Docker image. The live instance runs at [cubel.ink](https://cubel.ink).
 
 ## Stack
 
