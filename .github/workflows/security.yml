@@ -14,15 +14,17 @@ env:
 
 jobs:
   check:
-    name: check creds
-    runs-on: ubuntu-latest
-    run: |
-      if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
-        echo "Error: DOCKER_USERNAME is empty!"
-        exit 1
-      else
-        echo "DOCKER_USERNAME is populated."
-      fi
+    name: Check CI Variables
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check for Docker credentials
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            echo "Error: DOCKERHUB_USERNAME is empty!"
+            exit 1
+          else
+            echo "DOCKERHUB_USERNAME is populated."
+          fi
 
   semgrep:
     name: Analyze (semgrep)
