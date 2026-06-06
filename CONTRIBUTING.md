@@ -1,4 +1,4 @@
-# Contributing to the LinkShort project
+# Contributing to the Cube-Link project
 
 ## Project Objectives
 
@@ -19,7 +19,7 @@ When raising a pull request to this repository, there are several checks that mu
 
 The checks will need to run their tools, and any findings must be resolved in order for your PR to be acceptable, they will run automatically when a Pull Request is raised.
 > [!NOTE]
-> Details about this process are on [the pipeline automation wiki page](https://github.com/jackseceng/LinkShort/wiki/Pipeline-Automation#checking-pull-requests)
+> Details about this process are on [the pipeline automation wiki page](https://github.com/jackseceng/Cube-Link/wiki/Pipeline-Automation#checking-pull-requests)
 
 If all checks pass (or are justified as to why they don't to a `CODEOWNER`), The PR must be merged to the main branch for deployment of static assets and/or the container image.
 

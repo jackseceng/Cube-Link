@@ -1,14 +1,14 @@
-# LinkShort
+# Cube-Link
 
-[![Security Scans](https://github.com/jackseceng/LinkShort/actions/workflows/security.yml/badge.svg)](https://github.com/jackseceng/LinkShort/actions/workflows/container.yml)
-![Image Size](https://img.shields.io/docker/image-size/jackseceng/linkshort/latest)
-![Codebase Size](https://img.shields.io/github/languages/code-size/jackseceng/LinkShort)
+[![Security Scans](https://github.com/jackseceng/Cube-Link/actions/workflows/security.yml/badge.svg)](https://github.com/jackseceng/Cube-Link/actions/workflows/container.yml)
+![Image Size](https://img.shields.io/docker/image-size/jackseceng/cube-link/latest)
+![Codebase Size](https://img.shields.io/github/languages/code-size/jackseceng/Cube-Link)
 
 This is the Python code, web assets and Docker configuration for a link shortening web app
 
 - Try out the app at [cubel.ink](https://cubel.ink)
 
-- Download the [DockerHub image](https://hub.docker.com/r/jackseceng/linkshort)
+- Download the [DockerHub image](https://hub.docker.com/r/jackseceng/cube-link)
 
 ## Testing locally
 
@@ -105,8 +105,8 @@ docker compose up -d --build
 ```
 ```bash
 [+] Running (2/2)
- ✔ Network linkshort_ls-net   Created
- ✔ Container linkshort-app-1  Started
+ ✔ Network cube-link_ls-net   Created
+ ✔ Container cube-link-app-1  Started
 ```
 
 If succesful, app will be running at [http://localhost](http://localhost), it will connect to your Turso database over the internet.

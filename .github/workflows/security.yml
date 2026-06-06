@@ -10,21 +10,19 @@ on:
 env:
   REGISTRY: docker.io
   REPOSITORY: jackseceng
-  IMAGE_NAME: linkshort
+  IMAGE_NAME: cube-link
 
 jobs:
   check:
-    name: Check GHA for Credentials
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Run check script
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "Error: DOCKERHUB_USERNAME is empty!"
-            exit 1
-          else
-            echo "DOCKERHUB_USERNAME is populated."
-          fi
+    name: check creds
+    runs-on: ubuntu-latest
+    run: |
+      if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+        echo "Error: DOCKER_USERNAME is empty!"
+        exit 1
+      else
+        echo "DOCKER_USERNAME is populated."
+      fi
 
   semgrep:
     name: Analyze (semgrep)
@@ -212,7 +210,7 @@ jobs:
             total=$(( total + c ))
           done
 
-          details=$(echo "$all_alerts" | jq -r '.[] | "| \(.most_recent_instance.location.path | ltrimstr("linkshort/") | gsub("//"; "/")):\(.most_recent_instance.location.start_line) | \(.rule.description) | \(.rule.security_severity_level // .rule.severity) | \(.tool.name) |"' | grep -v '^$' || true)
+          details=$(echo "$all_alerts" | jq -r '.[] | "| \(.most_recent_instance.location.path | ltrimstr("Cube-Link/") | gsub("//"; "/")):\(.most_recent_instance.location.start_line) | \(.rule.description) | \(.rule.security_severity_level // .rule.severity) | \(.tool.name) |"' | grep -v '^$' || true)
 
           severity_order=("critical" "high" "error" "medium" "warning" "low" "note")
           highest="none"
@@ -240,7 +238,7 @@ jobs:
           summary="> [!${alert_type}]${sep}> **$total** findings, some of which are **$highest** severity."
           findings_table="| File | Description | Severity | Tool |${sep}|------|-------------|----------|------|${sep}${details}"
           dropdown="<details><summary>View all findings</summary>${sep}${sep}${findings_table}${sep}${sep}</details>"
-          footer="> Any findings must be fixed or justified, see [repository PR guidance](https://github.com/jackseceng/LinkShort?tab=contributing-ov-file#making-prs) for details."
+          footer="> Any findings must be fixed or justified, see [repository PR guidance](https://github.com/jackseceng/Cube-Link?tab=contributing-ov-file#making-prs) for details."
           body="${header}${sep}${sep}${summary}${sep}${sep}${dropdown}${sep}${sep}${footer}"
 
           existing=$(gh api "repos/$REPO/issues/$PR/comments" \
@@ -253,6 +251,6 @@ jobs:
           fi
 
           if [[ "$total" -gt 0 ]]; then
-            echo "::error::$total open security finding(s) found. Any findings must be fixed or justified, see repository PR guidance for details https://github.com/jackseceng/LinkShort?tab=contributing-ov-file#making-prs"
+            echo "::error::$total open security finding(s) found. Any findings must be fixed or justified, see repository PR guidance for details https://github.com/jackseceng/Cube-Link?tab=contributing-ov-file#making-prs"
             exit 1
           fi
