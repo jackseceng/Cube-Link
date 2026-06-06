@@ -14,10 +14,9 @@ env:
 
 jobs:
   check:
-    name: check creds
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: Check Docker credentials
+      - name: Check GHA Secrets for Credentials
         run: |
           if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
             echo "Error: DOCKERHUB_USERNAME is empty!"
