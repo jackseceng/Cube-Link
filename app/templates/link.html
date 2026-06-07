@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <title>Your short link - cubelink</title>
-    <link rel="stylesheet" href="https://{{ cdn }}/style.css" integrity="sha384-wUdlFxWYlrECprUMtZACDfROoVPJ7yvZw43pdMgDqYVlxDJEJZb3vD+AStJqzf0u" crossorigin="anonymous" />
+    <link 
+      rel="stylesheet"
+      href="https://{{ cdn }}/style.css"
+      integrity="sha384-rZE1zhtmnnkfwxruYi1wiFnmUbfk32nJCdRzUlzDgQQiC2eCDmfQDvMLeTyxinCa"
+      crossorigin="anonymous"
+    />
     <link
       rel="icon"
       type="image/png"
@@ -46,7 +51,17 @@
         </center>
       </div>
       <div class="control block-cube block-input">
-        <input id="link" type="text" value="https://{{tld}}/{{extension}}" />
+        <div class="input-group">
+          <input id="link" type="text" value="https://{{tld}}/{{extension}}" readonly />
+          <button
+            id="copybtn"
+            type="button"
+            class="copy-btn-inline"
+            tabindex="-1"
+          >
+            COPY
+          </button>
+        </div>
         <div class="bg-top">
           <div class="bg-inner"></div>
         </div>
@@ -57,52 +72,50 @@
           <div class="bg-inner"></div>
         </div>
       </div>
-      <button
-        id="copybtn"
-        type="button"
-        class="btn block-cube block-cube-hover"
-      >
-        <div class="bg-top">
-          <div class="bg-inner"></div>
-        </div>
-        <div class="bg-right">
-          <div class="bg-inner"></div>
-        </div>
-        <div class="bg">
-          <div class="bg-inner"></div>
-        </div>
-        <div class="text">Copy link</div>
-      </button>
       <center>
-        <div id="qrcode" class="glow"></div>
-        <p>
+        <div class="qr-frame">
+          <div id="qrcode" class="glow"></div>
+          <div class="qr-frame-divider"></div>
           <button
             id="saveqrcode"
             type="button"
-            class="btn block-cube block-cube-hover"
+            class="qr-download-btn"
           >
-            <div class="bg-top">
-              <div class="bg-inner"></div>
-            </div>
-            <div class="bg-right">
-              <div class="bg-inner"></div>
-            </div>
-            <div class="bg">
-              <div class="bg-inner"></div>
-            </div>
-            <div class="text">Download QR Code</div>
+            Download QR Code
           </button>
-        </p>
-        <p>
-          <a href="https://{{tld}}/{{extension}}/stats" target="_blank"
-            ><span class="text">View link stats&gt;</span></a
-          >
-        </p>
-        <p>
-          <a href="https://{{tld}}" target="_blank"
-            ><span class="text">Share another link&gt;</span></a
-          >
-        </p>
+        </div>
+        <a
+          href="https://{{tld}}/{{extension}}/stats"
+          target="_blank"
+          class="btn block-cube block-cube-hover-btn1"
+        >
+          <div class="bg-top">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="bg-right">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="bg">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="text">View statistics</div>
+        </a>
+        <br>
+        <a
+          href="https://{{tld}}"
+          class="btn block-cube block-cube-hover-btn2"
+        >
+          <div class="bg-top">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="bg-right">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="bg">
+            <div class="bg-inner"></div>
+          </div>
+          <div class="text">Share another link</div>
+        </a>
       </center>
       <div class="credits">
         <a

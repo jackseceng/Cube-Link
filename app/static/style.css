@@ -152,14 +152,13 @@ h1 {
 }
 /* stylelint-enable */
 
-.block-cube.block-cube-hover:hover .bg .bg-inner {
+.block-cube.block-cube-hover-btn1:hover .bg .bg-inner {
   top: 100%;
 }
 
-.block-cube.block-cube-hover:focus .bg .bg-inner,
-.block-cube.block-input input:focus ~ .bg-right .bg-inner,
-.block-cube.block-input input:focus ~ .bg-top .bg-inner,
-.block-cube.block-input input:focus ~ .bg-inner .bg-inner {
+.block-cube.block-cube-hover-btn1:focus-within .bg .bg-inner,
+.block-cube.block-input:focus-within .bg-right .bg-inner,
+.block-cube.block-input:focus-within .bg-top .bg-inner {
   top: 100%;
   background: rgb(255 255 255 / 50%);
 }
@@ -222,6 +221,60 @@ h1 {
   max-height: 120px;
   opacity: 1;
   margin-bottom: 24px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  width: 100% !important;
+  position: relative;
+  z-index: 5;
+}
+
+.input-group input {
+  flex: 1 !important;
+  min-width: 0;
+  width: 100% !important;
+  padding-right: 10px !important;
+}
+
+.copy-btn-inline {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  color: #00e5ff;
+  cursor: pointer;
+  padding: 0 15px;
+  height: 48px; /* Match standard input height */
+  font-weight: bold;
+  font-family: inherit;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: color 0.2s;
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.copy-btn-inline::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 15%);
+  transform: translateY(100%);
+  transition: transform 0.2s ease-in-out;
+  z-index: -1;
+}
+
+.copy-btn-inline:hover {
+  color: #fff;
+}
+
+.copy-btn-inline:hover::before {
+  transform: translateY(0);
 }
 
 .custom-ext-inner {
@@ -358,7 +411,10 @@ a:hover {
 #qrcode {
   width: 160px;
   height: 160px;
-  margin-top: 40px;
+}
+
+.qr-frame #qrcode {
+  margin-top: 0;
 }
 
 .glow {
@@ -371,4 +427,93 @@ a:hover {
   display: flex;
   justify-content: center;
   gap: 20px;
+}
+
+a.block-cube {
+  background: none;
+  padding: 14px 16px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* btn2: yellow-to-orange variant */
+.block-cube.block-cube-hover-btn2 .bg-top {
+  background: #7a3a00;
+  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
+}
+
+.block-cube.block-cube-hover-btn2 .bg {
+  background: #7a3a00;
+  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
+}
+
+.block-cube.block-cube-hover-btn2 .bg-right {
+  background: #ffa500;
+}
+
+.block-cube.block-cube-hover-btn2:hover .bg .bg-inner {
+  top: 100%;
+}
+
+.block-cube.block-cube-hover-btn2:focus .bg .bg-inner {
+  top: 100%;
+  background: rgb(255 255 255 / 50%);
+}
+
+/* QR code frame with download button */
+.qr-frame {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 16px 16px 0;
+}
+
+.qr-frame .glow {
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  box-shadow: rgb(255 255 255) 0 0 10px 10px;
+}
+
+.qr-frame-divider {
+  width: 100%;
+  height: 1px;
+  background: rgb(255 255 255 / 20%);
+  position: relative;
+  z-index: 2;
+  margin-top: 24px;
+}
+
+.qr-download-btn {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 12px 16px 0.2em;
+  font-weight: normal;
+  font-family: monospace, serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  width: 100%;
+  opacity: 0.6;
+  /* Underline wipe matching the global <a> style */
+  background-image: linear-gradient(currentcolor 0 0);
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: 0% 0.1em;
+  transition:
+    opacity 0.2s,
+    background-size 0.2s;
+}
+
+.qr-download-btn:hover,
+.qr-download-btn:focus {
+  opacity: 1;
+  background-size: 100% 0.1em;
+  outline: none;
 }
