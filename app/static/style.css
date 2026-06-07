@@ -177,6 +177,30 @@ h1 {
 }
 /* stylelint-enable */
 
+/* btn2: yellow-to-orange variant */
+.block-cube.block-cube-hover-btn2 .bg-top {
+  background: #7a3a00;
+  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
+}
+
+.block-cube.block-cube-hover-btn2 .bg {
+  background: #7a3a00;
+  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
+}
+
+.block-cube.block-cube-hover-btn2 .bg-right {
+  background: #ffa500;
+}
+
+.block-cube.block-cube-hover-btn2:hover .bg .bg-inner {
+  top: 100%;
+}
+
+.block-cube.block-cube-hover-btn2:focus .bg .bg-inner {
+  top: 100%;
+  background: rgb(255 255 255 / 50%);
+}
+
 .block-cube.block-input:focus .bg-top,
 .block-cube.block-input:focus .bg-right,
 .block-cube.block-input:focus .bg,
@@ -231,18 +255,20 @@ h1 {
   z-index: 5;
 }
 
+/* stylelint-disable */
 .input-group input {
   flex: 1 !important;
   min-width: 0;
   width: 100% !important;
   padding-right: 10px !important;
 }
+/* stylelint-enable */
 
 .copy-btn-inline {
   flex-shrink: 0;
   background: transparent;
   border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgb(255 255 255 / 15%);
   color: #00e5ff;
   cursor: pointer;
   padding: 0 15px;
@@ -436,30 +462,6 @@ a.block-cube {
   margin-top: 10px;
 }
 
-/* btn2: yellow-to-orange variant */
-.block-cube.block-cube-hover-btn2 .bg-top {
-  background: #7a3a00;
-  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
-}
-
-.block-cube.block-cube-hover-btn2 .bg {
-  background: #7a3a00;
-  background: linear-gradient(90deg, #7a3a00 0%, #c86000 37%, #ffa500 94%);
-}
-
-.block-cube.block-cube-hover-btn2 .bg-right {
-  background: #ffa500;
-}
-
-.block-cube.block-cube-hover-btn2:hover .bg .bg-inner {
-  top: 100%;
-}
-
-.block-cube.block-cube-hover-btn2:focus .bg .bg-inner {
-  top: 100%;
-  background: rgb(255 255 255 / 50%);
-}
-
 /* QR code frame with download button */
 .qr-frame {
   display: inline-flex;
@@ -501,6 +503,7 @@ a.block-cube {
   white-space: nowrap;
   width: 100%;
   opacity: 0.6;
+
   /* Underline wipe matching the global <a> style */
   background-image: linear-gradient(currentcolor 0 0);
   background-repeat: no-repeat;

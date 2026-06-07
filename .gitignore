@@ -8,3 +8,5 @@ node_modules/*
 !.kiro/steering/**
 !.kiro/hooks/
 !.kiro/hooks/**
+package-lock.json
+package.json
