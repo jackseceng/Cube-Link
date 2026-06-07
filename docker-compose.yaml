@@ -6,6 +6,8 @@ networks:
 services:
   app:
     build: .
+    env_file:
+      - app/.env
     networks:
       - ls-net
     ports:
