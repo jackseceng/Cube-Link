@@ -184,12 +184,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           declare -A tool_counts
           tools=("Grype" "Trivy" "Docker Scout" "Semgrep PRO" "CodeQL")
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
-          HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
           all_alerts="[]"
           page=1
