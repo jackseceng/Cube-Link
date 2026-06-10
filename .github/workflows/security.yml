@@ -189,10 +189,12 @@ jobs:
           tools=("Grype" "Trivy" "Docker Scout" "Semgrep PRO" "CodeQL")
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
+          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+
           all_alerts="[]"
           page=1
           while true; do
-            batch=$(gh api "repos/$REPO/code-scanning/alerts?pr=$PR&state=open&per_page=100&page=$page" 2>/dev/null || echo "[]")
+            batch=$(gh api "repos/$REPO/code-scanning/alerts?ref=$HEAD_REF&state=open&per_page=100&page=$page" 2>/dev/null || echo "[]")
             count=$(echo "$batch" | jq 'length')
             [[ "$count" -eq 0 ]] && break
             all_alerts=$(echo "$all_alerts $batch" | jq -s 'add')
