@@ -4,7 +4,7 @@ Gunicorn==26.0.0
 pyturso==0.6.1
 urllib3==2.7.0
 python-dotenv==1.2.2
-Cryptography==48.0.0
+Cryptography==48.0.1
 requests==2.34.2
 aiohttp==3.14.1 # Pinned to avoid a vulnerability
 zipp>=4.1.0 # Pinned to avoid a vulnerability
