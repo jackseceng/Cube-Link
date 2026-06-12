@@ -8,19 +8,19 @@ WORKDIR /build
 COPY requirements.txt .
 COPY app/ ./app/
 
-# Build Python 3.15.0a6 and apk dependencies from source
+# Build Python 3.15.0b2 and apk dependencies from source
 RUN set -e; \
     apk add --no-cache \
-    build-base=0.5-r3 \
-    libffi-dev=3.5.2-r0 \
+    build-base=0.5-r4 \
+    libffi-dev=3.5.2-r1 \
     openssl-dev=3.5.7-r0 \
     zlib-dev=1.3.2-r0 \
     bzip2-dev=1.0.8-r6 \
     xz-dev=5.8.3-r0 \
-    wget=1.25.0-r2; \
-    wget --progress=dot:giga https://www.python.org/ftp/python/3.15.0/Python-3.15.0a6.tgz; \
-    tar -xzf Python-3.15.0a6.tgz; \
-    ./Python-3.15.0a6/configure --prefix=/usr/local --enable-shared --with-ensurepip=install; \
+    wget=1.25.0-r3; \
+    wget --progress=dot:giga https://www.python.org/ftp/python/3.15.0/Python-3.15.0b2.tgz; \
+    tar -xzf Python-3.15.0b2.tgz; \
+    ./Python-3.15.0b2/configure --prefix=/usr/local --enable-shared --with-ensurepip=install; \
     make -j"$(nproc)"; \
     make install; \
     ln -s /usr/local/bin/python3.15 /usr/local/bin/python;
