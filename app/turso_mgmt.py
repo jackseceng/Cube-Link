@@ -1,7 +1,7 @@
 """Turso query and connection management module"""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from os import environ
 from re import search
 
@@ -55,7 +55,7 @@ def insert_link(hashsum: str, url: bytes, salt: bytes):
     conn = _create_connection()
     try:
         # Insert entry
-        lastclick = datetime.utcnow().isoformat()
+        lastclick = datetime.now(timezone.utc).isoformat()
         conn.execute(
             "INSERT INTO urls(hashsum, url, salt, clicks, lastclick) VALUES (?, ?, ?, 0, ?);",
             (hashsum, url, salt, lastclick),
@@ -77,7 +77,7 @@ def increment_click(hashsum: str):
     """Increment the click count and update the last click timestamp for a given link"""
     conn = _create_connection()
     try:
-        lastclick = datetime.utcnow().isoformat()
+        lastclick = datetime.now(timezone.utc).isoformat()
         conn.execute(
             "UPDATE urls SET clicks = clicks + 1, lastclick = ? WHERE hashsum = ?",
             (lastclick, hashsum),

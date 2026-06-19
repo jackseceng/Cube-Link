@@ -5,7 +5,6 @@ import logging
 from http import HTTPStatus
 from os import environ, path
 
-import bleach
 import turso_mgmt as db
 import url_mgmt as urls
 from flask import (
@@ -51,7 +50,7 @@ def input_url():
                 # Retrieve user input from html form on index page
                 # Perform syntax checks
                 received_request = dict(request.form.to_dict())
-                user_input = bleach.clean(str(received_request["link"]))
+                user_input = str(received_request["link"])
                 error = ""
                 if urls.check_url_whitespace(user_input) is False:
                     error = "whitespace"
@@ -69,8 +68,8 @@ def input_url():
                     )
                     return resp
 
-                custom_ext = bleach.clean(
-                    str(received_request.get("custom_extension", ""))
+                custom_ext = (str
+                    (received_request.get("custom_extension", ""))
                 ).strip()
                 if custom_ext:
                     if not urls.validate_custom_extension(custom_ext):
@@ -153,7 +152,7 @@ def input_url():
 @application.route("/<arg>/stats")
 def show_stats(arg):
     """Display statistics for a given short URL"""
-    requested_path = bleach.clean(str(arg))
+    requested_path = str(arg)
     hashsum = hashlib.sha256(requested_path.encode("utf-8")).hexdigest()
     clicks, last_click = db.get_stats(hashsum)
 
@@ -175,7 +174,7 @@ def show_stats(arg):
 def redirect_url(arg):
     """Redirect logic for any GET requests to any URI on top of base URL"""
     # Clean arg, return 404 for unfound URL
-    requested_path = bleach.clean(str(arg))
+    requested_path = str(arg)
 
     match requested_path:
         case "robots.txt":
@@ -201,6 +200,8 @@ def redirect_url(arg):
                 newlink = urls.decrypt_url(
                     url_bytes, requested_path, salt_bytes
                 ).decode("utf-8")
+                if not newlink.startswith("https://"):
+                    return page_not_found(HTTPStatus.NOT_FOUND)
                 resp = make_response(
                     render_template("redirect.html", link=newlink, tld=tld, cdn=cdn)
                 )
@@ -211,9 +212,9 @@ def redirect_url(arg):
 
 @application.after_request
 def add_security_headers(resp):
+    """Add CSP headers to all responses generated"""
     cf = "challenges.cloudflare.com"
 
-    """Add CSP headers to all responses generated"""
     app_origin_url = f"https://{tld}"
 
     # CSP sources: 'self', 'data:' (for images), and third party domains are included:
@@ -258,7 +259,6 @@ def add_security_headers(resp):
             "Cross-Origin-Opener-Policy": "same-origin",
             "Cross-Origin-Resource-Policy": "cross-site",
             "Permissions-Policy": "geolocation=(), camera=(), microphone=(), interest-cohort=()",
-            "X-CSRFToken": "Required",
             "X-DNS-Prefetch-Control": "off",
         }
     )
@@ -270,9 +270,14 @@ def page_not_found(error):
     """Handles 404 Not Found errors."""
     application.logger.info("Not Found: %s", error, exc_info=True)
     resp = make_response(
-        render_template("404.html", code=HTTPStatus.NOT_FOUND, tld=tld, cdn=cdn)
+        render_template("404.html",
+        code=HTTPStatus.NOT_FOUND,
+        tld=tld,
+        cdn=cdn
+        )
     )
     resp.status_code = HTTPStatus.NOT_FOUND
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
     return resp
 
 
@@ -282,10 +287,14 @@ def internal_server_error(error):
     application.logger.error("Server Error: %s", error, exc_info=True)
     resp = make_response(
         render_template(
-            "500.html", code=HTTPStatus.INTERNAL_SERVER_ERROR, tld=tld, cdn=cdn
+            "500.html",
+            code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            tld=tld,
+            cdn=cdn
         )
     )
     resp.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
     return resp
 
 
