@@ -104,7 +104,7 @@ After updating templates, rebuild the container. In production, also purge the C
 
 ## Security Conventions
 
-- All user input is sanitised with `bleach.clean()` before use
+- All user input is sanitised with before use
 - URLs must start with `https://` and contain no whitespace
 - Custom short extensions are alphanumeric only, 1–30 chars
 - URL reputation is checked against two external blocklists on every submission
@@ -117,7 +117,6 @@ After updating templates, rebuild the container. In production, also purge the C
 - Module-level docstrings on every file
 - All functions have docstrings
 - Exceptions are caught and logged with `logging.error()`; functions return `False` or `None` on failure rather than raising
-- `bleach.clean()` wraps all user-supplied strings before processing
 - Use `http.HTTPStatus` constants instead of raw integer status codes
 - New database operations go in `turso_mgmt.py`; URL logic goes in `url_mgmt.py`; routing stays in `app.py`
 

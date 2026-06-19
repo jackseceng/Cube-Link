@@ -20,6 +20,8 @@ jobs:
       packages: read
       # To report GitHub Actions status checks
       statuses: write
+      # To post pull request review comments
+      pull-requests: write
 
     steps:
       - name: Checkout

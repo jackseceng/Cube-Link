@@ -7,7 +7,6 @@ import string
 from urllib.parse import urlparse
 
 import requests
-import urllib3
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -18,7 +17,7 @@ KDF_ITERATIONS = 120000
 
 
 def generate_path():
-    """ "Generate path value"""
+    """Generate path value"""
     try:
         alphabet = string.ascii_letters + string.digits
         return "".join(secrets.choice(alphabet) for _ in range(7))
@@ -100,35 +99,29 @@ def check_url_reputation(url_input):
         input_host = (parsed_input.hostname or "").lower()
         if not input_host:
             return False
-        with urllib3.PoolManager() as http:
-            URL1 = "https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt"
-            URL2 = "https://raw.githubusercontent.com/stamparm/blackbook/refs/heads/master/blackbook.txt"
 
-            timeout = urllib3.Timeout(connect=3.0, read=5.0)
+        URL1 = (
+            "https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt"
+        )
+        URL2 = "https://raw.githubusercontent.com/stamparm/blackbook/refs/heads/master/blackbook.txt"
 
-            response1 = http.request("GET", URL1, timeout=timeout)
-            response2 = http.request("GET", URL2, timeout=timeout)
+        response1 = requests.get(URL1, timeout=(3.0, 5.0))
+        response2 = requests.get(URL2, timeout=(3.0, 5.0))
 
-            text1 = response1.data.decode("utf-8")
-            text2 = response2.data.decode("utf-8")
+        blacklist = response1.text + response2.text
 
-            blacklist = text1 + text2
-
-            for line in blacklist.splitlines():
-                candidate = line.strip().lower()
-                if not candidate or candidate.startswith("#"):
-                    continue
-                parsed_candidate = urlparse(
-                    candidate if "://" in candidate else f"http://{candidate}"
-                )
-                blocked_host = (parsed_candidate.hostname or candidate).strip(".")
-                if not blocked_host:
-                    continue
-                if input_host == blocked_host or input_host.endswith(
-                    f".{blocked_host}"
-                ):
-                    if line and line in url_input:
-                        return False
+        for line in blacklist.splitlines():
+            candidate = line.strip().lower()
+            if not candidate or candidate.startswith("#"):
+                continue
+            parsed_candidate = urlparse(
+                candidate if "://" in candidate else f"http://{candidate}"
+            )
+            blocked_host = (parsed_candidate.hostname or candidate).strip(".")
+            if not blocked_host:
+                continue
+            if input_host == blocked_host or input_host.endswith(f".{blocked_host}"):
+                return False
         return True
     except Exception as e:
         logging.error("Error on check_url_reputation: %s", e)
