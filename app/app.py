@@ -68,9 +68,7 @@ def input_url():
                     )
                     return resp
 
-                custom_ext = (str
-                    (received_request.get("custom_extension", ""))
-                ).strip()
+                custom_ext = (str(received_request.get("custom_extension", ""))).strip()
                 if custom_ext:
                     if not urls.validate_custom_extension(custom_ext):
                         error = "customext"
@@ -270,11 +268,7 @@ def page_not_found(error):
     """Handles 404 Not Found errors."""
     application.logger.info("Not Found: %s", error, exc_info=True)
     resp = make_response(
-        render_template("404.html",
-        code=HTTPStatus.NOT_FOUND,
-        tld=tld,
-        cdn=cdn
-        )
+        render_template("404.html", code=HTTPStatus.NOT_FOUND, tld=tld, cdn=cdn)
     )
     resp.status_code = HTTPStatus.NOT_FOUND
     resp.headers["Content-Type"] = "text/html; charset=utf-8"
@@ -287,10 +281,7 @@ def internal_server_error(error):
     application.logger.error("Server Error: %s", error, exc_info=True)
     resp = make_response(
         render_template(
-            "500.html",
-            code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            tld=tld,
-            cdn=cdn
+            "500.html", code=HTTPStatus.INTERNAL_SERVER_ERROR, tld=tld, cdn=cdn
         )
     )
     resp.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
