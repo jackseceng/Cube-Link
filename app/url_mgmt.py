@@ -100,7 +100,9 @@ def check_url_reputation(url_input):
         if not input_host:
             return False
 
-        URL1 = "https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt"
+        URL1 = (
+            "https://raw.githubusercontent.com/Spam404/lists/master/main-blacklist.txt"
+        )
         URL2 = "https://raw.githubusercontent.com/stamparm/blackbook/refs/heads/master/blackbook.txt"
 
         response1 = requests.get(URL1, timeout=(3.0, 5.0))
