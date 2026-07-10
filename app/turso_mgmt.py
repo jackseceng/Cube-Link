@@ -37,9 +37,7 @@ def _get_connection():
     if _conn is None:
         _db_path = f"/tmp/urls-{getpid()}.db"
         try:
-            _conn = turso.sync.connect(
-                _db_path, remote_url=url, auth_token=auth_token
-            )
+            _conn = turso.sync.connect(_db_path, remote_url=url, auth_token=auth_token)
             _conn.pull()
             logging.info(
                 "Database connection established and replica pulled (pid=%d, path=%s).",
@@ -47,9 +45,7 @@ def _get_connection():
                 _db_path,
             )
         except Exception as e:
-            logging.error(
-                "Failed to create database connection or pull replica: %s", e
-            )
+            logging.error("Failed to create database connection or pull replica: %s", e)
             raise
     return _conn
 
