@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timezone
 from os import environ
-from re import search
+from re import IGNORECASE, search
 
 import turso.sync
 from dotenv import load_dotenv
@@ -17,9 +17,58 @@ DB_PATH = "/tmp/urls.db"
 
 def _create_connection():
     """Creates and returns a new database connection."""
-    conn = turso.sync.connect(DB_PATH, remote_url=url, auth_token=auth_token)
-    conn.pull()
-    return conn
+    try:
+        conn = turso.sync.connect(DB_PATH, remote_url=url, auth_token=auth_token)
+        conn.pull()
+        return conn
+    except Exception as e:
+        logging.error("Failed to create database connection or pull replica: %s", e)
+        raise
+
+
+def _coerce_blob(value, field_name: str) -> bytes:
+    """Coerce a database BLOB value to bytes.
+
+    pyturso may return BLOB columns as bytes, memoryview, or (in some driver
+    versions) a base64-encoded string.  Stringifying an arbitrary object with
+    ``bytes(str(obj), 'utf-8')`` produces garbage such as ``b'<memory at
+    0x…>'``, which silently corrupts Fernet decryption.  This helper handles
+    all known return types safely.
+    """
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, memoryview):
+        logging.debug("BLOB field '%s' returned as memoryview — converting", field_name)
+        return bytes(value)
+    if isinstance(value, bytearray):
+        logging.debug("BLOB field '%s' returned as bytearray — converting", field_name)
+        return bytes(value)
+    if isinstance(value, str):
+        # Some driver versions return BLOBs as base64 strings.
+        logging.warning(
+            "BLOB field '%s' returned as str — attempting base64 decode. "
+            "Raw value (first 60 chars): %.60r",
+            field_name,
+            value,
+        )
+        try:
+            import base64 as _base64
+
+            return _base64.b64decode(value)
+        except Exception as decode_err:
+            logging.error(
+                "BLOB field '%s': base64 decode failed (%s). "
+                "Falling back to raw UTF-8 encoding — decryption will likely fail.",
+                field_name,
+                decode_err,
+            )
+            return value.encode("utf-8")
+    logging.error(
+        "BLOB field '%s' has unexpected type %s — coercion may be incorrect.",
+        field_name,
+        type(value).__name__,
+    )
+    return bytes(value)
 
 
 def get_link(hashsum: str):
@@ -32,16 +81,17 @@ def get_link(hashsum: str):
         row = result_set.fetchone()
 
         if row:
-            # Ensure data is returned as bytes, adjust if your schema stores them differently
-            url_data = (
-                row[0] if isinstance(row[0], bytes) else bytes(str(row[0]), "utf-8")
+            logging.debug(
+                "get_link raw types — url: %s, salt: %s",
+                type(row[0]).__name__,
+                type(row[1]).__name__,
             )
-            salt_data = (
-                row[1] if isinstance(row[1], bytes) else bytes(str(row[1]), "utf-8")
-            )
+            url_data = _coerce_blob(row[0], "url")
+            salt_data = _coerce_blob(row[1], "salt")
             return url_data, salt_data
+        logging.info("get_link: no row found for hashsum %s", hashsum)
         return False, False
-    except Exception as e:  # Use specific or general exception
+    except Exception as e:
         logging.error("Error on get_link: %s", e)
         return False, False
     finally:
@@ -51,7 +101,6 @@ def get_link(hashsum: str):
 
 def insert_link(hashsum: str, url: bytes, salt: bytes):
     """Insert an entry under the specified path, return bool outcome"""
-    unique_error = "UNIQUE constraint failed: urls.HASHSUM"
     conn = _create_connection()
     try:
         # Insert entry
@@ -63,7 +112,9 @@ def insert_link(hashsum: str, url: bytes, salt: bytes):
         conn.commit()
         return True, None
     except Exception as e:  # Changed from Error to a more general Exception
-        if search(unique_error, str(e)):
+        # Match case-insensitively — the driver may return the column name in
+        # any case (e.g. "urls.HASHSUM" vs "urls.hashsum").
+        if search(r"UNIQUE constraint failed: urls\.hashsum", str(e), IGNORECASE):
             logging.warning("Entry already exists: %s", e)
             return False, "non-unique"
         logging.error("Error on insert_link: %s", e)
