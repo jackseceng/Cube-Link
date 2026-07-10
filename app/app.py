@@ -195,10 +195,22 @@ def redirect_url(arg):
                 return page_not_found(HTTPStatus.NOT_FOUND)
             else:
                 db.increment_click(hashsum)
-                newlink = urls.decrypt_url(
-                    url_bytes, requested_path, salt_bytes
-                ).decode("utf-8")
+                decrypted = urls.decrypt_url(url_bytes, requested_path, salt_bytes)
+                if decrypted is False:
+                    logging.error(
+                        "decrypt_url failed for path=%s — BLOB data may be corrupt "
+                        "or the driver returned an unexpected type.",
+                        requested_path,
+                    )
+                    abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+                newlink = decrypted.decode("utf-8")
                 if not newlink.startswith("https://"):
+                    logging.error(
+                        "Decrypted URL for path=%s does not start with https:// — "
+                        "possible data corruption. Value: %.100r",
+                        requested_path,
+                        newlink,
+                    )
                     return page_not_found(HTTPStatus.NOT_FOUND)
                 resp = make_response(
                     render_template("redirect.html", link=newlink, tld=tld, cdn=cdn)
