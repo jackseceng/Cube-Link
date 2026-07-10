@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
-from os import environ
+from os import environ, getpid
 from re import IGNORECASE, search
 
 import turso.sync
@@ -12,18 +12,42 @@ load_dotenv()
 
 url = environ["ENDPOINT"]
 auth_token = environ["TOKEN"]
-DB_PATH = "/tmp/urls.db"
+
+# Module-level connection — opened once per worker process on first use.
+# pull() bootstraps the local replica from the remote so reads are
+# immediately available.  Writes call push() to propagate to the remote.
+#
+# Each Gunicorn worker is a separate OS process.  libSQL's sync engine holds
+# an exclusive file lock on the local replica, so all workers cannot share a
+# single path.  DB_PATH is intentionally left as None here and resolved
+# inside _get_connection() using getpid() *after* the worker fork, so each
+# worker gets its own file (e.g. /tmp/urls-7.db, /tmp/urls-8.db, …).
+_conn = None
+_db_path = None
 
 
-def _create_connection():
-    """Creates and returns a new database connection."""
-    try:
-        conn = turso.sync.connect(DB_PATH, remote_url=url, auth_token=auth_token)
-        conn.pull()
-        return conn
-    except Exception as e:
-        logging.error("Failed to create database connection or pull replica: %s", e)
-        raise
+def _get_connection():
+    """Return the module-level connection, initialising it on first call.
+
+    The replica path is derived from the current PID on first call so that
+    each Gunicorn worker (a separate OS process) uses its own file, avoiding
+    the exclusive-lock contention that libSQL's sync engine enforces.
+    """
+    global _conn, _db_path
+    if _conn is None:
+        _db_path = f"/tmp/urls-{getpid()}.db"
+        try:
+            _conn = turso.sync.connect(_db_path, remote_url=url, auth_token=auth_token)
+            _conn.pull()
+            logging.info(
+                "Database connection established and replica pulled (pid=%d, path=%s).",
+                getpid(),
+                _db_path,
+            )
+        except Exception as e:
+            logging.error("Failed to create database connection or pull replica: %s", e)
+            raise
+    return _conn
 
 
 def _coerce_blob(value, field_name: str) -> bytes:
@@ -73,7 +97,7 @@ def _coerce_blob(value, field_name: str) -> bytes:
 
 def get_link(hashsum: str):
     """Get entries that match provided path, return output string or bool False if fail"""
-    conn = _create_connection()
+    conn = _get_connection()
     try:
         result_set = conn.execute(
             "SELECT url, salt FROM urls WHERE hashsum = ?", (hashsum,)
@@ -94,14 +118,11 @@ def get_link(hashsum: str):
     except Exception as e:
         logging.error("Error on get_link: %s", e)
         return False, False
-    finally:
-        if conn:
-            conn.close()
 
 
 def insert_link(hashsum: str, url: bytes, salt: bytes):
     """Insert an entry under the specified path, return bool outcome"""
-    conn = _create_connection()
+    conn = _get_connection()
     try:
         # Insert entry
         lastclick = datetime.now(timezone.utc).isoformat()
@@ -110,6 +131,7 @@ def insert_link(hashsum: str, url: bytes, salt: bytes):
             (hashsum, url, salt, lastclick),
         )
         conn.commit()
+        conn.push()
         return True, None
     except Exception as e:  # Changed from Error to a more general Exception
         # Match case-insensitively — the driver may return the column name in
@@ -119,14 +141,11 @@ def insert_link(hashsum: str, url: bytes, salt: bytes):
             return False, "non-unique"
         logging.error("Error on insert_link: %s", e)
         return False, str(e)
-    finally:
-        if conn:
-            conn.close()
 
 
 def increment_click(hashsum: str):
     """Increment the click count and update the last click timestamp for a given link"""
-    conn = _create_connection()
+    conn = _get_connection()
     try:
         lastclick = datetime.now(timezone.utc).isoformat()
         conn.execute(
@@ -134,18 +153,16 @@ def increment_click(hashsum: str):
             (lastclick, hashsum),
         )
         conn.commit()
+        conn.push()
         return True, None
     except Exception as e:
         logging.error("Error on increment_click: %s", e)
         return False, str(e)
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_stats(hashsum: str):
     """Get click count and last click time for a given link"""
-    conn = _create_connection()
+    conn = _get_connection()
     try:
         result_set = conn.execute(
             "SELECT clicks, lastclick FROM urls WHERE hashsum = ?", (hashsum,)
@@ -160,6 +177,3 @@ def get_stats(hashsum: str):
     except Exception as e:
         logging.error("Error on get_stats: %s", e)
         return None, None
-    finally:
-        if conn:
-            conn.close()
