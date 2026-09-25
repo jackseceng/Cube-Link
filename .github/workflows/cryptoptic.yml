@@ -21,7 +21,6 @@ jobs:
 
     permissions:
       contents: read
-      security-events: write
 
     strategy:
       fail-fast: false
@@ -42,18 +41,73 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           target-language: ${{ matrix.language }}
-          output-directory: cryptoptic-results
+          output-directory: cryptoptic-results/${{ matrix.language }}
 
-      - name: Upload SARIF to Security tab
+      - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         if: always()
         with:
           sarif_file: ${{ steps.cryptoptic.outputs.results-directory }}
           category: cryptoptic-${{ matrix.language }}
 
-      - name: Convert SARIF to CSV
+      - name: Upload results artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: cbom-${{ matrix.language }}
+          path: ${{ steps.cryptoptic.outputs.results-directory }}
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate CBOM
+    runs-on: ubuntu-24.04
+    needs: [scan]
+    if: always()
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download Python results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: cbom-python
+          path: cryptoptic-results/python
+
+      - name: Download JavaScript results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: cbom-javascript
+          path: cryptoptic-results/javascript
+
+      - name: Convert Python SARIF to CSV
         uses: nationwide-group-oss/cryptoptic@58e45717959a1c0d38fa293f12d78ec35e2f922d # main
         with:
           command: convert
-          sarif-file: ${{ steps.cryptoptic.outputs.results-directory }}/org-sarif/${{ matrix.language }}/results.sarif
-          output-file: cryptoptic-results/cbom-${{ matrix.language }}.csv
+          sarif-file: cryptoptic-results/python/org-sarif/python/results.sarif
+          output-file: cryptoptic-results/cbom-python.csv
+
+      - name: Convert JavaScript SARIF to CSV
+        uses: nationwide-group-oss/cryptoptic@58e45717959a1c0d38fa293f12d78ec35e2f922d # main
+        with:
+          command: convert
+          sarif-file: cryptoptic-results/javascript/org-sarif/javascript/results.sarif
+          output-file: cryptoptic-results/cbom-javascript.csv
+
+      - name: Aggregate all CSVs into combined CBOM
+        uses: nationwide-group-oss/cryptoptic@58e45717959a1c0d38fa293f12d78ec35e2f922d # main
+        with:
+          command: aggregate
+          csv-inputs: cryptoptic-results
+          recursive: "true"
+          output-file: cryptoptic-results/cbom-inventory.csv
+
+      - name: Upload combined CBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cbom-inventory
+          path: cryptoptic-results/cbom-inventory.csv
+          retention-days: 90
