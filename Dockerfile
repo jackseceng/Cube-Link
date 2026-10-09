@@ -13,8 +13,8 @@ RUN set -e; \
     apk add --no-cache \
     build-base=0.5-r4 \
     libffi-dev=3.5.2-r1 \
-    openssl-dev=3.5.8-r0 \
-    zlib-dev=1.3.2-r0 \
+    openssl-dev=3.5.9-r0 \
+    zlib-dev=1.3.2-r1 \
     bzip2-dev=1.0.8-r6 \
     xz-dev=5.8.4-r0 \
     wget=1.25.0-r3; \
