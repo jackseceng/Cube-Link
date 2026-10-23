@@ -1,0 +1,156 @@
+---
+name: Cryptographic Inventory
+
+# The cryptoptic action's `scan` command is broken in the public release
+# (commit 58e4571): scripts/org_codeql_sarif_run.py is missing from the
+# repo, so the Docker container exits with "No such file or directory"
+# and every downstream step that reads steps.cryptoptic.outputs fails.
+#
+# This workflow works around that by running the cryptoptic query packs
+# through the standard github/codeql-action (init + analyze) instead of
+# the broken scan command.  The analyze step also uploads SARIF to code
+# scanning, so the separate upload-sarif step is no longer needed.
+#
+# CSV conversion and aggregation use the cryptoptic Python scripts
+# (sarif_to_csv.py, aggregate_csv.py) directly on the runner.  Both
+# scripts are stdlib-only and do not need the Docker container.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Run weekly on Monday at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  read-all
+
+jobs:
+  scan:
+    name: Scan (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      # Required by github/codeql-action/analyze to upload SARIF results
+      # to the repository's code scanning view.
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - python
+          - javascript
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkout cryptoptic query packs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: nationwide-group-oss/cryptoptic
+          ref: 58e45717959a1c0d38fa293f12d78ec35e2f922d
+          path: cryptoptic
+          sparse-checkout: |
+            codeql-queries
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config: |
+            name: Cryptoptic
+            disable-default-queries: true
+            queries:
+              - uses: ./cryptoptic/codeql-queries/${{ matrix.language }}
+
+      - name: Analyze with CodeQL
+        id: analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          category: cryptoptic-${{ matrix.language }}
+
+      - name: Stage SARIF for artifact
+        run: |
+          mkdir -p cryptoptic-results/${{ matrix.language }}
+          cp "${{ steps.analyze.outputs.sarif-output }}"/*.sarif \
+             "cryptoptic-results/${{ matrix.language }}/"
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: cbom-${{ matrix.language }}
+          path: cryptoptic-results/${{ matrix.language }}
+          retention-days: 90
+
+  aggregate:
+    name: Aggregate CBOM
+    runs-on: ubuntu-24.04
+    needs: [scan]
+    if: always()
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Checkout cryptoptic scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: nationwide-group-oss/cryptoptic
+          ref: 58e45717959a1c0d38fa293f12d78ec35e2f922d
+          path: cryptoptic
+          sparse-checkout: |
+            scripts
+
+      - name: Download Python results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: cbom-python
+          path: cryptoptic-results/python
+
+      - name: Download JavaScript results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: cbom-javascript
+          path: cryptoptic-results/javascript
+
+      - name: Convert SARIF to CSV and aggregate
+        run: |
+          # Convert each language's SARIF to CSV.
+          # --repo sets the repo column in the CSV so the filename
+          # of the SARIF (which the CodeQL action names by language)
+          # does not need to follow cryptoptic's owner__repo convention.
+          for lang in python javascript; do
+            sarif_file=$(find "cryptoptic-results/$lang" -name '*.sarif' -print -quit 2>/dev/null)
+            if [ -n "$sarif_file" ]; then
+              python cryptoptic/scripts/sarif_to_csv.py \
+                --repo "${{ github.repository }}" \
+                "$sarif_file" \
+                "cryptoptic-results/cbom-$lang.csv"
+            else
+              echo "Warning: no SARIF found for $lang, skipping"
+            fi
+          done
+
+          # Aggregate all CSVs into a single CBOM.
+          python cryptoptic/scripts/aggregate_csv.py \
+            cryptoptic-results \
+            --output cryptoptic-results/cbom-inventory.csv \
+            --recursive
+
+      - name: Upload combined CBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cbom-inventory
+          path: cryptoptic-results/cbom-inventory.csv
+          retention-days: 90
