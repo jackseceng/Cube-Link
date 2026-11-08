@@ -1,0 +1,101 @@
+---
+name: Docker Hub PR Cleanup
+
+# The Security workflow (.github/workflows/security.yml) builds and
+# pushes a per-PR Docker image to Docker Hub on pull_request events,
+# tagging it with the PR number (github.event.number) as
+# jackseceng/cube-link:<PR number>.  When that PR is later closed --
+# whether it is merged into main or closed without merging -- the tag
+# is stale and should be removed so that only active (non-draft) PRs
+# retain a build on Docker Hub.
+#
+# This workflow only deletes tags; it never creates builds.  It runs on
+# the pull_request "closed" activity, which fires for both a plain
+# close and a merge (a merge always closes the PR too).
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions: {}
+
+env:
+  # Mirror the namespace/image used by the Security workflow.
+  REPOSITORY: jackseceng
+  IMAGE_NAME: cube-link
+
+jobs:
+  cleanup:
+    name: Delete PR tag from Docker Hub
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete PR tag from Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          PR_TAG: ${{ github.event.number }}
+        run: |
+          set -euo pipefail
+
+          # Fork pull requests (and misconfigured repos) do not expose
+          # Docker Hub secrets to pull_request events, and the Security
+          # workflow cannot push a build without them, so there is
+          # nothing to delete.  Skip gracefully instead of failing.
+          if [ -z "${DOCKERHUB_USERNAME}" ] || [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "Docker Hub credentials are unavailable; no PR build to clean up. Skipping."
+            exit 0
+          fi
+
+          # Build the login request body with jq so the secret values are
+          # JSON-escaped safely and never shell-interpolated raw.
+          LOGIN_BODY=$(jq -n \
+            --arg username "${DOCKERHUB_USERNAME}" \
+            --arg password "${DOCKERHUB_TOKEN}" \
+            '{"username": $username, "password": $password}')
+
+          # Exchange credentials for a Docker Hub API JWT.
+          LOGIN_RESPONSE=$(curl -sS \
+            -H "Content-Type: application/json" \
+            -X POST \
+            -d "${LOGIN_BODY}" \
+            https://hub.docker.com/v2/users/login/)
+
+          TOKEN=$(printf '%s' "${LOGIN_RESPONSE}" | jq -r '.token // empty')
+          if [ -z "${TOKEN}" ]; then
+            echo "::error::Docker Hub login did not return a token (check DOCKERHUB_USERNAME / DOCKERHUB_TOKEN)." >&2
+            exit 1
+          fi
+
+          echo "Deleting tag '${PR_TAG}' from ${REPOSITORY}/${IMAGE_NAME} on Docker Hub ..."
+
+          # Delete the per-PR tag via the Docker Hub REST API.
+          #   204      = deleted
+          #   404      = already absent (draft PR that was never built)
+          #   401/403  = authorisation problem
+          #   other    = unexpected
+          HTTP_STATUS=$(curl -sS -o /tmp/delete_resp -w "%{http_code}" \
+            -X DELETE \
+            -H "Authorization: JWT ${TOKEN}" \
+            "https://hub.docker.com/v2/repositories/${REPOSITORY}/${IMAGE_NAME}/tags/${PR_TAG}/")
+
+          case "${HTTP_STATUS}" in
+            200|204)
+              echo "Deleted tag '${PR_TAG}' (HTTP ${HTTP_STATUS})."
+              ;;
+            404)
+              echo "Tag '${PR_TAG}' was not found on Docker Hub -- already removed or never built. Nothing to do."
+              ;;
+            401|403)
+              echo "::error::Not authorised to delete tag '${PR_TAG}' (HTTP ${HTTP_STATUS})." >&2
+              cat /tmp/delete_resp >&2 || true
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected HTTP ${HTTP_STATUS} deleting tag '${PR_TAG}'." >&2
+              cat /tmp/delete_resp >&2 || true
+              exit 1
+              ;;
+          esac
