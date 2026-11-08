@@ -1,6 +1,8 @@
 # Cube-Link
 
-[![Security Scans](https://github.com/jackseceng/Cube-Link/actions/workflows/security.yml/badge.svg)](https://github.com/jackseceng/Cube-Link/actions/workflows/container.yml)
+[![Security](https://github.com/jackseceng/Cube-Link/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/jackseceng/Cube-Link/actions/workflows/security.yml)
+[![Cryptography](https://github.com/jackseceng/Cube-Link/actions/workflows/cryptoptic.yml/badge.svg?branch=main)](https://github.com/jackseceng/Cube-Link/actions/workflows/cryptoptic.yml)
+[![Linter](https://github.com/jackseceng/Cube-Link/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/jackseceng/Cube-Link/actions/workflows/lint.yml)
 ![Image Size](https://img.shields.io/docker/image-size/jackseceng/cube-link/latest)
 ![Codebase Size](https://img.shields.io/github/languages/code-size/jackseceng/Cube-Link)
 
