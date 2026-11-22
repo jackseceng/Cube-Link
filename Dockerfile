@@ -4,6 +4,9 @@
 # cuts build time significantly.
 FROM python:3.15-slim AS build-env
 
+# Upgrade all system packages to pick up patched libgcc-s1 and Python libs
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 # Set build directory
 WORKDIR /build
 
