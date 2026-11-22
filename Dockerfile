@@ -1,5 +1,8 @@
-# Stage 1: Build stage environment using alpine python Image
-FROM alpine:3.24 AS build-env
+# Stage 1: Build stage using the official Python 3.15 slim image (Debian/glibc).
+# Using a glibc base means pyturso installs from a pre-built manylinux wheel
+# rather than compiling from Rust source, which avoids musl build failures and
+# cuts build time significantly.
+FROM python:3.15-slim AS build-env
 
 # Set build directory
 WORKDIR /build
@@ -8,29 +11,12 @@ WORKDIR /build
 COPY requirements.txt .
 COPY app/ ./app/
 
-# Build Python 3.15.0b2 and apk dependencies from source
-RUN set -e; \
-    apk add --no-cache \
-    build-base=0.5-r4 \
-    libffi-dev=3.5.2-r1 \
-    openssl-dev=3.5.9-r0 \
-    zlib-dev=1.4-r0 \
-    bzip2-dev=1.0.8-r6 \
-    xz-dev=5.8.4-r0 \
-    wget=1.25.0-r3; \
-    wget --progress=dot:giga https://www.python.org/ftp/python/3.15.0/Python-3.15.0b2.tgz; \
-    tar -xzf Python-3.15.0b2.tgz; \
-    ./Python-3.15.0b2/configure --prefix=/usr/local --enable-shared --with-ensurepip=install; \
-    make -j"$(nproc)"; \
-    make install; \
-    ln -s /usr/local/bin/python3.15 /usr/local/bin/python;
-
 # Install python dependencies into a target directory, then remove pip so it
 # is not present in the runtime image (avoids shipping pip CVEs at runtime)
 RUN set -e; \
-    pip3.15 install --no-cache-dir --upgrade 'pip==26.0'; \
-    PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 pip3.15 install --no-cache-dir -r requirements.txt --target /packages; \
-    pip3.15 uninstall -y pip setuptools wheel 2>/dev/null || true; \
+    pip install --no-cache-dir --upgrade 'pip==26.0'; \
+    pip install --no-cache-dir -r requirements.txt --target /packages; \
+    pip uninstall -y pip setuptools wheel 2>/dev/null || true; \
     find /usr/local/lib/python3.15 -type d -name 'pip*' -exec rm -rf {} + 2>/dev/null || true; \
     find /usr/local/lib/python3.15 -type d -name 'setuptools*' -exec rm -rf {} + 2>/dev/null || true;
 
@@ -38,16 +24,34 @@ RUN set -e; \
 # Stage 2: Runtime Stage using scratch Image
 FROM scratch
 
-# Copy necessary system libraries and interpreter from build-env
-COPY --from=build-env /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1
-COPY --from=build-env /lib/libc.musl-x86_64.so.1 /lib/libc.musl-x86_64.so.1
+# Copy necessary system libraries and interpreter from build-env.
+# This list is derived by loading all app imports in python:3.15-slim and
+# recording every .so that appears in /proc/self/maps.
+#
+# Linker — must live at the path the ELF interpreter field requests
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+# glibc
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libc.so.6 /usr/lib/x86_64-linux-gnu/libc.so.6
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/x86_64-linux-gnu/libdl.so.2
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libm.so.6 /usr/lib/x86_64-linux-gnu/libm.so.6
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libpthread.so.0 /usr/lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/librt.so.1 /usr/lib/x86_64-linux-gnu/librt.so.1
+# Python runtime
 COPY --from=build-env /usr/local/lib/libpython3.15.so.1.0 /usr/local/lib/libpython3.15.so.1.0
 COPY --from=build-env /usr/local/lib/python3.15 /usr/local/lib/python3.15
-COPY --from=build-env /usr/lib/libssl.so.3 /usr/lib/libssl.so.3
-COPY --from=build-env /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.3
-COPY --from=build-env /usr/lib/libz.so.1 /usr/lib/libz.so.1
-COPY --from=build-env /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s.so.1
-COPY --from=build-env /usr/lib/libffi.so.8 /usr/lib/libffi.so.8
+# OpenSSL (required by ssl, hashlib, cryptography)
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libssl.so.3 /usr/lib/x86_64-linux-gnu/libssl.so.3
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+# Compression libs (required by zlib, bz2, lzma, zstd modules)
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libz.so.1 /usr/lib/x86_64-linux-gnu/libz.so.1
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libzstd.so.1 /usr/lib/x86_64-linux-gnu/libzstd.so.1
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libbz2.so.1.0 /usr/lib/x86_64-linux-gnu/libbz2.so.1.0
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/liblzma.so.5 /usr/lib/x86_64-linux-gnu/liblzma.so.5
+# Other Python built-in module deps
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libmpdec.so.4 /usr/lib/x86_64-linux-gnu/libmpdec.so.4
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libuuid.so.1 /usr/lib/x86_64-linux-gnu/libuuid.so.1
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libffi.so.8 /usr/lib/x86_64-linux-gnu/libffi.so.8
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
 
 # Copy Python binary
 COPY --from=build-env /usr/local/bin/python /usr/local/bin/python
